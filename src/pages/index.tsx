@@ -1,114 +1,244 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { NextPage } from "next";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { type ModelType } from "@/utils/api";
+import ReactMarkdown from "@/components/markdown/ReactMarkdown";
+import { useRef, useState } from "react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SseClient, SseOptions } from "@/utils/sse";
+import { NextSeo } from "next-seo";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const Home: NextPage = () => {
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [value, setValue] = useState("");
+  const [model, setModel] = useState<ModelType>("qwen-plus");
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  const options: SseOptions = {
+    url: "/api/answer",
+    method: "POST",
+    headers: {
+      "Content-Type": "text/event-stream",
+    },
+    onMessage: (event) => {
+      const { data } = event;
+      try {
+        const validData = JSON.parse(data);
+        setMessage((prevAnswer) => prevAnswer + validData.Content);
+        if (validData?.IsDone) {
+          setLoading(false);
+        }
+        console.log("Received message:", JSON.parse(data));
+      } catch {}
+    },
+    onError: (error) => {
+      console.error("SSE error:", error);
+    },
+    onOpen: () => {
+      console.log("SSE connection opened");
+    },
+    onClose: () => {
+      console.log("SSE connection closed");
+    },
+  };
 
-export default function Home() {
+  const SseClientRef = useRef(new SseClient(options)).current;
+
+  const handleFetchData = async () => {
+    setLoading(true);
+    setMessage("");
+
+    SseClientRef.sendMessage({
+      input: value,
+      model,
+    });
+  };
+
   return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/pages/index.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="p-8 bg-gray-100 min-h-screen">
+      {/* 标题和模型选择区域 */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-gray-800">知识问答</h2>
+        <div className="w-48">
+          <Select
+            onValueChange={(v: ModelType) => {
+              setModel(v);
+            }}
+            defaultValue="qwen-plus"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <SelectTrigger>
+              <SelectValue placeholder="模型选择" />
+            </SelectTrigger>
+            <SelectContent className="border border-gray-300 rounded-md shadow-lg">
+              <SelectGroup>
+                <SelectItem value="deepseek-chat">DeepSeek</SelectItem>
+                <SelectItem value="qwen-plus">通义千问</SelectItem>
+                <SelectItem value="hunyuan-turbo">混元</SelectItem>
+                <SelectItem value="generalv3.5">星火</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      </div>
+
+      {/* 输入框和按钮区域 */}
+      <div className="flex items-center space-x-4 mb-8">
+        <form onSubmit={handleFetchData} className="flex-1 flex space-x-4">
+          <Input
+            onChange={(evt) => {
+              setValue(evt.target?.value);
+            }}
+            placeholder="请输入问题"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <Button
+            disabled={loading || !value}
+            onClick={handleFetchData}
+            type="submit"
+          >
+            {loading ? "生成中，请稍等。。。" : "获取答案"}
+          </Button>
+        </form>
+      </div>
+
+      {/* 答案展示区域 */}
+      {message && (
+        <div className="bg-white p-6 rounded-md shadow-md mb-8">
+          <ReactMarkdown content={message} />
+        </div>
+      )}
+      {/* 工具专区 */}
+      <div className="bg-white p-6 rounded-md shadow-md mb-4">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">效率工具</h2>
+        <nav>
+          <ul className="flex flex-col md:flex-row gap-4">
+            <li className="flex-1">
+              <Link
+                href="/qcode"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                <span className="block text-2xl mb-2">📖</span>
+                二维码生成
+              </Link>
+            </li>
+            <li className="flex-1">
+              <Link
+                href="/delivery"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                <span className="block text-2xl mb-2">📦</span>
+                快递查询
+              </Link>
+            </li>
+            <li className="flex-1">
+              <Link
+                href="/github"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                <span className="block text-2xl mb-2">🔍</span>
+                GitHub关键词搜索
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      {/* 图像专区 */}
+      <div className="bg-white p-6 rounded-md shadow-md mb-4">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">图像生成</h2>
+        <nav>
+          <ul className="flex flex-col md:flex-row gap-4">
+            <li className="flex-1">
+              <Link
+                href="/text-to-image"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                <span className="block text-2xl mb-2">🔧</span>
+                文字生成图片
+              </Link>
+            </li>
+            <li className="flex-1">
+              <Link
+                href="/placard"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                <span className="block text-2xl mb-2">🎬</span>
+                海报生成
+              </Link>
+            </li>
+            <li className="flex-1">
+              <Link
+                href="/ocr"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                <span className="block text-2xl mb-2">ocr</span>
+                图像文字提取
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      {/* 游戏专区 */}
+      <div className="bg-white p-6 rounded-md shadow-md">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">游戏专区</h2>
+        <nav>
+          <ul className="flex flex-col md:flex-row gap-4">
+            <li className="flex-1">
+              <Link
+                href="/ai-game"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              >
+                <span className="block text-2xl mb-2">🌿</span>
+                丛林探险
+              </Link>
+            </li>
+            <li className="flex-1">
+              <Link
+                href="/game"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-50 hover:text-amber-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                <span className="block text-2xl mb-2">🐍</span>
+                贪吃蛇
+              </Link>
+            </li>
+            <li className="flex-1">
+              <Link
+                href="/gold-miner-game"
+                className="block bg-white border border-gray-300 rounded-md py-4 px-6 text-center text-gray-700 hover:bg-amber-100 hover:text-amber-800 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <span className="block text-2xl mb-2">⚒️</span>
+                黄金矿工
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      </div>
+      <NextSeo title="HOME" description="this is a home page" />
     </div>
   );
+};
+
+export async function getServerSideProps() {
+  try {
+    return {
+      props: {
+        data: {},
+      },
+    };
+  } catch (error) {
+    console.error("接口请求出错:", error);
+    return {
+      props: {
+        data: null,
+      },
+    };
+  }
 }
+
+export default Home;
