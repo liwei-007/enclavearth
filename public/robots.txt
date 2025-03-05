@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /amp/
+
+User-agent: Baiduspider
+User-agent: 360Spider
+User-agent: Yisouspider
+User-agent: Sogouspider
+User-agent: AhrefsBot
+User-agent: Amazonbot
+Disallow: /
