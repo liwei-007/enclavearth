@@ -17,6 +17,7 @@ const ImageSearch: React.FC = () => {
         input: {
           prompt: searchQuery,
         },
+        model: "wanx2.1-t2i-turbo",
         parameters: {
           size: "1024*1024",
           n: 1,

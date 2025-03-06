@@ -13,7 +13,7 @@ const ImageSearch: React.FC = () => {
 
   // 配置 SSE 请求选项
   const options: SseOptions = {
-    url: "/api/app",
+    url: "/api/stream/api",
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -1,23 +1,9 @@
+/**
+ * 通过 api 调用 - 流式
+ */
+import { APP_MODEL_CONFIGS, AppModelType } from "@/types/model";
 import request from "@/utils/axios";
 import { NextApiRequest } from "next";
-
-type ModelType = "generalv3.5" | "qwen-plus";
-type ModelConfig = {
-  baseURL: string;
-  apiKey: string;
-};
-
-const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
-  "qwen-plus": {
-    baseURL:
-      "https://dashscope.aliyuncs.com/api/v1/apps/d7045172f58049279283515fa53f98bd/completion",
-    apiKey: process.env.NEXT_PUBLIC_QWEN_KEY!,
-  },
-  "generalv3.5": {
-    baseURL: "https://spark-api-open.xf-yun.com/v1/chat/completions",
-    apiKey: "dJFSOjOupsoxVAyNffxL:buIgpyokaDABlaidxjHX",
-  },
-};
 
 export default async function handler(req: NextApiRequest, res: any) {
   if (req.method !== "POST") {
@@ -27,8 +13,8 @@ export default async function handler(req: NextApiRequest, res: any) {
 
   const { input, model } = req.body;
 
-  const apiKey = MODEL_CONFIGS[model as ModelType]?.apiKey;
-  const baseURL = MODEL_CONFIGS[model as ModelType].baseURL;
+  const apiKey = APP_MODEL_CONFIGS[model as AppModelType].apiKey;
+  const baseURL = APP_MODEL_CONFIGS[model as AppModelType].baseURL;
 
   if (!input || !model) {
     return res
@@ -42,24 +28,19 @@ export default async function handler(req: NextApiRequest, res: any) {
     Connection: "keep-alive",
   });
   res.flushHeaders();
-
-  //   messages: [
-  //     {
-  //       role: "user",
-  //       content: input,
-  //     },
-  //   ],
-
+  // 星火大模型需要传 model，其他的不需要传
+  // input ｜ message 结构不一样
   try {
     const response = await request.post<any>(
       baseURL,
       {
-        // model,
         input,
         parameters: {
           incremental_output: "true", // 增量输出
         },
+        // model,
         debug: {},
+        // stream: true,
       },
       {
         headers: {
@@ -88,7 +69,6 @@ export default async function handler(req: NextApiRequest, res: any) {
                 })}\n\n`
               );
               res.flush();
-              console.log("Parsed data:", jsonData);
             } catch (parseError) {
               console.error("Error parsing JSON data:", parseError);
             }

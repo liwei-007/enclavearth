@@ -1,7 +1,6 @@
 import type { NextPage } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { type ModelType } from "@/utils/api";
 import ReactMarkdown from "@/components/markdown/ReactMarkdown";
 import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { SseClient, SseOptions } from "@/utils/sse";
 import { NextSeo } from "next-seo";
+import { ModelType } from "@/types/model";
 
 const Home: NextPage = () => {
   const [message, setMessage] = useState("");
@@ -23,7 +23,7 @@ const Home: NextPage = () => {
   const [model, setModel] = useState<ModelType>("qwen-plus");
 
   const options: SseOptions = {
-    url: "/api/answer",
+    url: "/api/stream/sdk",
     method: "POST",
     headers: {
       "Content-Type": "text/event-stream",

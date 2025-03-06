@@ -1,39 +1,9 @@
+/**
+ * 通过 sdk 调用 - 流式
+ */
+import { MODEL_CONFIGS, ModelType } from "@/types/model";
 import { NextApiRequest } from "next";
 import OpenAI from "openai";
-
-type ModelType =
-  | "deepseek-chat"
-  | "qwen-plus"
-  | "qwen-vl-ocr"
-  | "hunyuan-turbo"
-  | "generalv3.5";
-type ModelConfig = {
-  baseURL: string;
-  apiKey: string;
-};
-
-const MODEL_CONFIGS: Record<ModelType, ModelConfig> = {
-  "deepseek-chat": {
-    baseURL: "https://api.deepseek.com",
-    apiKey: process.env.NEXT_PUBLIC_DEEPSEEK_KEY!,
-  },
-  "qwen-plus": {
-    baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    apiKey: process.env.NEXT_PUBLIC_QWEN_KEY!,
-  },
-  "qwen-vl-ocr": {
-    baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    apiKey: process.env.NEXT_PUBLIC_QWEN_KEY!,
-  },
-  "hunyuan-turbo": {
-    baseURL: "https://api.hunyuan.cloud.tencent.com/v1",
-    apiKey: process.env.NEXT_PUBLIC_HUNYUAN_KEY!,
-  },
-  "generalv3.5": {
-    baseURL: "https://spark-api-open.xf-yun.com/v1",
-    apiKey: "dJFSOjOupsoxVAyNffxL:buIgpyokaDABlaidxjHX",
-  },
-};
 
 const openAIClients: Record<ModelType, OpenAI | null> = {
   "deepseek-chat": null,

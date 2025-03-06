@@ -12,7 +12,7 @@ const GitHubSearch: React.FC = () => {
 
   // 配置 SSE 请求选项
   const options: SseOptions = {
-    url: "/api/app",
+    url: "/api/stream/api",
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -45,6 +45,7 @@ const GitHubSearch: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
+
     SseClientRef.sendMessage({
       input: {
         prompt: `以 markdown 列表带样式的形式输出 github 搜索列表 { keyword: ${searchQuery} }，只包含列表部分并且链接处加粗展示`,

@@ -1,3 +1,4 @@
+import { APP_MODEL_CONFIGS, AppModelType } from "@/types/model";
 import request from "@/utils/axios";
 let intervalId: NodeJS.Timeout;
 const handler = async (
@@ -14,18 +15,23 @@ const handler = async (
     try {
       const jsonData = JSON.parse(req?.body);
 
+      const apiKey = APP_MODEL_CONFIGS[jsonData?.model as AppModelType].apiKey;
+      const baseURL =
+        APP_MODEL_CONFIGS[jsonData?.model as AppModelType].baseURL;
+
       try {
         // 发送初始的文本到图像合成请求
         const response = await request.post<{ output: { task_id: string } }>(
-          "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis",
+          baseURL,
           {
             input: jsonData?.input,
             parameters: jsonData?.parameters ?? {},
-            model: jsonData?.model ?? "wanx2.1-t2i-turbo",
+            model: jsonData?.model,
           },
           {
             headers: {
               "X-DashScope-Async": "enable",
+              Authorization: `Bearer ${apiKey}`,
             },
           }
         );
@@ -44,7 +50,6 @@ const handler = async (
                     `https://dashscope.aliyuncs.com/api/v1/tasks/${taskId}`,
                     {}
                   );
-                  console.log("Task status poll:", data);
 
                   // 检查任务状态
                   if (data?.output?.task_status === "SUCCEEDED") {
